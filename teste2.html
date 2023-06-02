@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Filtro de Localizações</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+  
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <label for="filter-input">Filtrar por nome:</label>
+  <input type="text" id="filter-input">
+  
+  <div id="map"></div>
+  
+  <form id="location-form">
+    <label for="name-input">Identificação:</label>
+    <input type="text" id="identif-input" required>
+    <br>
+    <label for="latitude-input">Latitude:</label>
+    <input type="text" id="latitude-input" required>
+    <br>
+    <label for="longitude-input">Longitude:</label>
+    <input type="text" id="longitude-input" required>
+    <br>
+    <button type="submit">Adicionar Localização</button>
+  </form>
+  
+  <script>
+    var locationsArray = [];
+
+    function initMap() {
+      var initialLatLng = { lat: -23.550520, lng: -46.633308 };
+      var mapOptions = {
+        center: initialLatLng,
+        zoom: 12
+      };
+      
+      var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+      
+      map.addListener('click', function(event) {
+        var latitude = event.latLng.lat();
+        var longitude = event.latLng.lng();
+  
+        var location = {
+          lat: latitude,
+          lng: longitude
+        };
+  
+        locationsArray.push(location);
+        saveLocationsToJson();
+  
+        var latitudeInput = document.getElementById('latitude-input');
+        var longitudeInput = document.getElementById('longitude-input');
+  
+        latitudeInput.value = latitude;
+        longitudeInput.value = longitude;
+      });
+      
+      loadLocationsFromJson();
+    }
+
+    function loadLocationsFromJson() {
+      fetch('http://192.168.0.6/localizacoes.json')
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          locationsArray = data;
+          displayLocations(locationsArray);
+        })
+        .catch(function(error) {
+          console.error('Erro ao carregar o arquivo JSON:', error);
+        });
+    }
+
+    function saveLocationsToJson() {
+      fetch('http://192.168.0.6/localizacoes.json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(locationsArray)
+      })
+        .then(function(response) {
+          console.log('Dados salvos com sucesso.');
+        })
+        .catch(function(error) {
+          console.error('Erro ao salvar os dados:', error);
+        });
+    }
+
+    function displayLocations(locations) {
+      var map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: -7.2438101999999995, lng: -39.144973799999995 },
+        zoom: 12
+      });
+  
+      var markers = [];
+  
+      for (var i = 0; i < locations.length; i++) {
+        var location = locations[i];
+        var coordinates = location.lat + ', ' + location.lng;
+  
+        var marker = new google.maps.Marker({
+          position: location,
+          map: map
+        });
+  
+        markers.push(marker);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var filterInput = document.getElementById('filter-input');
+      filterInput.addEventListener('input', function() {
+        var filterValue = filterInput.value.toLowerCase();
+        var filteredLocations = locationsArray.filter(function(location) {
+          var name = location.name.toLowerCase();
+          return name.includes(filterValue);
+        });
+  
+        displayLocations(filteredLocations);
+      });
+
+      var locationForm = document.getElementById('location-form');
+      locationForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+  
+        var latitudeInput = document.getElementById('latitude-input');
+        var longitudeInput = document.getElementById('longitude-input');
+  
+        var latitude = parseFloat(latitudeInput.value);
+        var longitude = parseFloat(longitudeInput.value);
+  
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+          var location = {
+            lat: latitude,
+            lng: longitude
+          };
+  
+          locationsArray.push(location);
+          saveLocationsToJson();
+  
+          latitudeInput.value = '';
+          longitudeInput.value = '';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

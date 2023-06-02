@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mapa com Localizações</title>
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mapa com Localizações</h1>
+  <div id="map"></div>
+
+  <script>
+    // Função para inicializar o mapa
+    function initMap() {
+      // Coordenadas iniciais
+      var initialLatLng = { lat: -23.550520, lng: -46.633308 };
+
+      // Opções do mapa
+      var mapOptions = {
+        center: initialLatLng,
+        zoom: 12
+      };
+
+      // Criação do mapa
+      var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+      // Leitura do arquivo JSON com as localizações
+      const options = {
+        method: 'GET',
+        mode: 'no-cors'
+      };
+      fetch('http://127.0.0.1/localizacoes.json', options)
+  .then(function(response) {
+    
+    
+    return response.json();
+    
+  })
+  .then(function(data) {
+    // Itera sobre as localizações e adiciona marcadores no mapa
+    data.features.forEach(function(location) {
+      
+      var coordinates = location.geometry.coordinates;
+      var latLng = { lat: coordinates[1], lng: coordinates[0] };
+
+      var marker = new google.maps.Marker({
+        position: latLng,
+        map: map,
+        title: location.properties.name
+      });
+      console.log({"coord" : [ {"latLng" : latLng}]});
+    });
+  
+  })
+  .catch(function(error) {
+    console.log('Ocorreu um erro na leitura do arquivo JSON:', error);
+  });
+    }
+  </script>
+
+  <!-- Inclusão da API do Google Maps -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABdqtIrsg55XbV39vv-HZxJv975h65ZdM&callback=initMap" async defer></script>
+</body>
+</html>

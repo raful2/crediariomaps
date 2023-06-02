@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Filtro de Localizações</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABdqtIrsg55XbV39vv-HZxJv975h65ZdM&callback=initMap" async defer></script>
+  
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+    #filter-input {
+      font-size: 30px;
+    }
+    #location-info {
+      margin-top: 20px;
+    }
+
+    #json-info {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+
+    #copy-button {
+      padding: 5px 10px;
+    }
+  </style>
+</head>
+<body>
+  <font size="30px"><label for="filter-input">Filtrar por nome:</label></font>
+  <input type="text" id="filter-input">
+  
+  <div id="map"></div>
+  <!-- Adicione esse código onde deseja exibir o formulário -->
+<form action="http://localhost/v1/addnew"id="location-form" method="POST">
+  <label for="nome-input">Identificação:</label>
+    <input type="text" id="nome-input" required>
+    <br>
+    <label for="latitude-input">Latitude:</label>
+    <input type="text" id="latitude-input" required>
+    <br>
+    <label for="longitude-input">Longitude:</label>
+    <input type="text" id="longitude-input" required>
+    <br>
+    <button type="submit" onclick="adicionarLocalizacao()">Adicionar Localização</button>
+  </form>
+  <div id="location-info">
+    <textarea id="json-info" rows="5" readonly></textarea>
+    <button id="copy-button">Copiar JSON</button>
+  </div>
+  <script>
+    
+
+    function initMap() {
+      // Coordenadas iniciais
+      
+      var initialLatLng = { lat: -7.250687819832447, lng: -39.138060363311034 };
+
+      // Opções do mapa
+      var mapOptions = {
+        center: initialLatLng,
+        zoom: 12
+      };
+   
+      // Criação do mapa
+      var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+      map.addListener('click', function(event) {
+        preencherFormulario(event.latLng.lat(), event.latLng.lng());
+      });
+      
+      // Leitura do arquivo JSON com as localizações
+      
+    
+      
+    }
+    var locationForm = document.getElementById('location-form');
+      locationForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+      });
+    var copyButton = document.getElementById('copy-button');
+      copyButton.addEventListener('click', function() {
+        var jsonInfo = document.getElementById('json-info');
+        jsonInfo.select();
+        jsonInfo.setSelectionRange(0, 99999);
+        document.execCommand('copy');
+        alert("JSON copiado para a área de transferência!");
+      });
+    
+    function preencherFormulario(latitude, longitude) {
+      document.getElementById('latitude-input').value = latitude;
+      document.getElementById('longitude-input').value = longitude;
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      
+        var filterInput = document.getElementById('filter-input');
+  var map;
+  var markers = [];
+
+  filterInput.addEventListener('input', function() {
+    var initialLatLng = { lat: -7.250661717810595, lng: -39.13803361518972 };
+
+    var mapOptions = {
+        center: initialLatLng,
+        zoom: 12
+      };
+    var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+      map.addListener('click', function(event) {
+        preencherFormulario(event.latLng.lat(), event.latLng.lng());
+      });
+    var filterValue = filterInput.value.toLowerCase();
+  const options = {
+        method: 'GET',
+        mode: 'no-cors'
+      };
+  fetch('localizacoes.json', options)
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        var filteredLocations = data.features.filter(function(feature) {
+          var name = feature.properties.name.toLowerCase();
+          return name.includes(filterValue);
+        });
+
+        displayLocations(filteredLocations);
+      })
+      .catch(function(error) {
+        console.error('Erro ao carregar o arquivo JSON:', error);
+      });
+ 
+      function displayLocations(locations) {
+       
+
+    if (map) {
+      // Limpar marcadores existentes
+      for (var i = 0; i < markers.length; i++) {
+        markers[i].setMap(null);
+      }
+    } else {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: {lat: -7.250661717810595, lng: -39.13803361518972},
+        zoom: 12
+      });
+    }
+
+    for (var i = 0; i < locations.length; i++) {
+      var location = locations[i];
+      
+      var coordinates = location.geometry.coordinates;
+      var name = location.properties.name;
+      var marker = new google.maps.Marker({
+        position: { lat: coordinates[1], lng: coordinates[0] },
+        map: map,
+        title: name
+      });
+      console.log("lat:"+coordinates[1]+" Lng"+coordinates[0]);
+
+      markers.push(marker);
+    }
+  }
+});
+
+
+
+  
+});
+function adicionarLocalizacao() {
+      var nome = document.getElementById('nome-input').value;
+      var latitude = parseFloat(document.getElementById('latitude-input').value);
+      var longitude = parseFloat(document.getElementById('longitude-input').value);
+
+      var newLocation = {
+        "type": "Feature",
+        "properties": {
+          "name": nome
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [longitude , latitude]
+        }
+      };
+      console.log(newLocation);
+
+      fetch('localizacoes.json')
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          data.features.push(newLocation);
+          return data;
+        })
+        .then(function(newLocation) {
+
+          return fetch('localizacoes.json', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newLocation)
+           
+          });
+          console.log(newLocation);
+        })
+        .then(function(response) {
+          if (response.ok) {
+            alert("Localização adicionada com sucesso!");
+          } else {
+            throw new Error('Erro ao atualizar o arquivo JSON.');
+          }
+        })
+        .catch(function(error) {
+          console.error('Erro:', error);
+        });
+    }
+  </script>
+</body>
+</html>
